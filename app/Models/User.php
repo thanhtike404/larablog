@@ -50,4 +50,12 @@ class User extends Authenticatable
     {
         return self::find($id);
     }
+
+    /**
+     * Get the blog posts for the user
+     */
+    public function blogPosts()
+    {
+        return $this->hasMany(BlogPost::class);
+    }
 }

@@ -7,28 +7,27 @@
                     BlogSpace
                 </a>
             </div>
-            
+
             <!-- Navigation Links -->
             <ul class="hidden md:flex space-x-6 list-none">
-               
-                    <x-nav-link href="home">Home</x-nav-link>
-              
-                    <x-nav-link href="posts">Posts</x-nav-link>
-         
-                    <x-nav-link href="categories">Categories</x-nav-link>
 
-                    <x-nav-link href="about">About</x-nav-link>
+                <x-nav-link href="home">Home</x-nav-link>
 
-                    <x-nav-link href="contact">Contact</x-nav-link>
+                <x-nav-link href="posts">Posts</x-nav-link>
+
+
+                <x-nav-link href="about">About</x-nav-link>
+
+                <x-nav-link href="contact">Contact</x-nav-link>
             </ul>
-            
+
             <!-- Search -->
             <!-- <div class="hidden md:block">
                 <input type="text" 
                        placeholder="Search..." 
                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div> -->
-            
+
             <!-- Mobile Menu Button -->
             <div class="md:hidden">
                 <button id="mobile-menu-btn" class="text-gray-700">
@@ -38,7 +37,7 @@
                 </button>
             </div>
         </div>
-        
+
         <!-- Mobile Menu -->
         <div id="mobile-menu" class="md:hidden hidden pb-4">
             <div class="space-y-2">
@@ -47,11 +46,11 @@
                 <a href="/categories" class="block py-2 text-gray-700 hover:text-blue-600">Categories</a>
                 <a href="/about" class="block py-2 text-gray-700 hover:text-blue-600">About</a>
                 <a href="/contact" class="block py-2 text-gray-700 hover:text-blue-600">Contact</a>
-                
+
                 <div class="pt-4">
-                    <input type="text" 
-                           placeholder="Search..." 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text"
+                        placeholder="Search..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
         </div>

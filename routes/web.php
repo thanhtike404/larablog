@@ -25,5 +25,8 @@ Route::get('/categories', function () {
 })->name('categories');
 
 // Web routes for blog posts
-Route::get('/posts', [PostController::class, 'index'])->name('posts');
-Route::get('/posts/{slug}', [PostController::class, 'show'])->name('posts.show');
+
+Route::prefix('posts')->group(function () {
+    Route::get('/', [PostController::class, 'index'])->name('posts');
+    Route::get('/{slug}', [PostController::class, 'show'])->name('posts.show');
+});

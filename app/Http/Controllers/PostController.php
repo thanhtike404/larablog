@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
+use App\Models\Tag;
+use App\Models\User;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -18,14 +21,26 @@ class PostController extends Controller
             ->orderBy('published_at', 'desc');
 
         // Filter by category if provided
-        if ($request->has('category')) {
+        if ($request->has('category') && $request->category) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
+        // Filter by tag if provided
+        if ($request->has('tag') && $request->tag) {
+            $query->whereHas('tags', function ($q) use ($request) {
+                $q->where('slug', $request->tag);
+            });
+        }
+
+        // Filter by author if provided
+        if ($request->has('author') && $request->author) {
+            $query->where('user_id', $request->author);
+        }
+
         // Search functionality
-        if ($request->has('search')) {
+        if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
@@ -33,11 +48,22 @@ class PostController extends Controller
             });
         }
 
+        $posts = $query->paginate(10)->withQueryString();
 
-        $posts = $query->paginate(10);
-        // dd($posts);
+        // Get data for sidebar filters with post counts
+        $categories = Category::withCount(['posts' => function ($query) {
+            $query->where('is_published', true);
+        }])->orderBy('name')->get();
 
-        return view('posts', compact('posts'));
+        $tags = Tag::withCount(['posts' => function ($query) {
+            $query->where('is_published', true);
+        }])->orderBy('name')->get();
+
+        $users = User::withCount(['blogPosts' => function ($query) {
+            $query->where('is_published', true);
+        }])->orderBy('name')->get();
+
+        return view('posts', compact('posts', 'categories', 'tags', 'users'));
     }
 
 
@@ -53,8 +79,6 @@ class PostController extends Controller
 
 
         $contentBlocks = $post->getOrderedContentBlocks();
-
-        dd($contentBlocks);
 
         return view('post-detail', compact('post', 'contentBlocks'));
     }
