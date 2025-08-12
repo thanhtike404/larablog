@@ -88,7 +88,7 @@ class PostController extends Controller
             $counter++;
         }
 
-        $validated['user_id'] = auth()->id() ?? 1; // Default to user 1 for testing
+        $validated['user_id'] = auth()->user()->id ?? 1; // Default to user 1 for testing
 
         if ($validated['is_published'] ?? false) {
             $validated['published_at'] = now();

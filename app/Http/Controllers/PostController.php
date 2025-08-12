@@ -33,15 +33,14 @@ class PostController extends Controller
             });
         }
 
+
         $posts = $query->paginate(10);
         // dd($posts);
 
         return view('posts', compact('posts'));
     }
 
-    /**
-     * Show a single blog post
-     */
+
     public function show($slug)
     {
         $post = BlogPost::with(['user', 'category', 'tags'])
@@ -52,10 +51,12 @@ class PostController extends Controller
         // Increment views
         $post->incrementViews();
 
-        return response()->json([
-            'post' => $post,
-            'content_blocks' => $post->getOrderedContentBlocks()
-        ]);
+
+        $contentBlocks = $post->getOrderedContentBlocks();
+
+        dd($contentBlocks);
+
+        return view('post-detail', compact('post', 'contentBlocks'));
     }
 
     /**

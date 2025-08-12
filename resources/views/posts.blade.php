@@ -36,19 +36,27 @@
                         </div>
 
                         <!-- Excerpt -->
+                        @if($post->excerpt)
                         <p class="text-gray-600 mb-3 text-sm md:text-base leading-relaxed">{{ $post->excerpt }}</p>
+                        @endif
 
-                        <!-- Content preview -->
+                        <!-- Content preview from JSON blocks -->
                         <div class="text-gray-700 mb-3 md:mb-4 leading-relaxed">
-                            <p class="text-sm md:text-base">{{ Str::limit($post->content, 150) }}</p>
+                            <p class="text-sm md:text-base">{{ Str::limit($post->getPlainTextContent(), 150) }}</p>
                         </div>
 
-                        <!-- Last updated -->
-                        <p class="text-gray-400 text-xs md:text-sm">Last updated: {{ $post->updated_at->diffForHumans() }}</p>
+                        <!-- Post stats -->
+                        <div class="flex items-center gap-4 mb-3 text-xs md:text-sm text-gray-500">
+                            @if($post->reading_time)
+                            <span>{{ $post->reading_time }} min read</span>
+                            @endif
+                            <span>{{ number_format($post->views_count) }} views</span>
+                            <span>{{ $post->updated_at->diffForHumans() }}</span>
+                        </div>
 
                         <!-- Read more link -->
                         <div class="mt-3 md:mt-4">
-                            <a href="#" class="text-blue-600 hover:text-blue-800 font-medium text-xs md:text-sm">
+                            <a href="{{ route('posts.show', $post->slug) }}" class="text-blue-600 hover:text-blue-800 font-medium text-xs md:text-sm">
                                 Read more →
                             </a>
                         </div>
@@ -57,7 +65,7 @@
                     <!-- Right column: Image -->
                     <div class="flex-shrink-0 order-1 md:order-2 w-full md:w-auto">
                         <img
-                            src="{{ $post->main_image ? $post->main_image : 'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d'}}"
+                            src="{{ $post->featured_image ?: 'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d'}}"
                             alt="{{ $post->title }}"
                             class="w-full h-48 md:w-40 md:h-32 object-cover rounded-lg shadow-sm" />
                     </div>
