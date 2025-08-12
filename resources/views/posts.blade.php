@@ -2,9 +2,9 @@
     <div class="max-w-5xl mx-auto px-3 md:px-4 py-6 md:py-8">
         <h1 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Blog Posts</h1>
 
-        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6 border border-gray-200">
+        <div class="bg-white rounded-lg  shadow-md overflow-hidden mb-6 border border-gray-200">
             @forelse ($posts as $post)
-            <div class="p-4 md:p-6 my-4 border-b border-gray-200">
+            <div class="p-4 md:p-6 my-4 border-b border-gray-200 mb-4 last:border-b-0">
                 <!-- Author info -->
                 <div class="flex items-center mb-3 md:mb-4">
                     <img

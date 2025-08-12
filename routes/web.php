@@ -24,4 +24,5 @@ Route::get('/categories', function () {
     return view('categories');
 })->name('categories');
 
+// Web route for blog posts
 Route::get('/posts', [PostController::class, 'index'])->name('posts');
