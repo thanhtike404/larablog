@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PostController;
+use App\Livewire\AuthorsPage;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,10 @@ Route::get('/categories', function () {
 // Web routes for blog posts
 
 Route::prefix('posts')->group(function () {
-    Route::get('/', [PostController::class, 'index'])->name('posts');
+    Route::get('/', function () {
+        return view('posts');
+    })->name('posts');
     Route::get('/{slug}', [PostController::class, 'show'])->name('posts.show');
 });
+
+Route::get('/authors', AuthorsPage::class)->name('authors');

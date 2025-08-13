@@ -20,26 +20,26 @@ class PostController extends Controller
             ->where('is_published', true)
             ->orderBy('published_at', 'desc');
 
-        // Filter by category if provided
+
         if ($request->has('category') && $request->category) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-        // Filter by tag if provided
+
         if ($request->has('tag') && $request->tag) {
             $query->whereHas('tags', function ($q) use ($request) {
                 $q->where('slug', $request->tag);
             });
         }
 
-        // Filter by author if provided
+
         if ($request->has('author') && $request->author) {
             $query->where('user_id', $request->author);
         }
 
-        // Search functionality
+
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -50,20 +50,9 @@ class PostController extends Controller
 
         $posts = $query->paginate(10)->withQueryString();
 
-        // Get data for sidebar filters with post counts
-        $categories = Category::withCount(['posts' => function ($query) {
-            $query->where('is_published', true);
-        }])->orderBy('name')->get();
 
-        $tags = Tag::withCount(['posts' => function ($query) {
-            $query->where('is_published', true);
-        }])->orderBy('name')->get();
 
-        $users = User::withCount(['blogPosts' => function ($query) {
-            $query->where('is_published', true);
-        }])->orderBy('name')->get();
-
-        return view('posts', compact('posts', 'categories', 'tags', 'users'));
+        return view('posts', compact('posts'));
     }
 
 

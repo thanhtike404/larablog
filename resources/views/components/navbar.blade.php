@@ -1,25 +1,24 @@
 <nav class="bg-white shadow-sm border-b border-gray-200">
     <div class="container mx-auto px-4">
         <div class="flex justify-between items-center py-4">
-            <!-- Logo/Brand -->
+
             <div class="flex items-center">
-                <a href="/" class="text-xl font-bold text-gray-800 hover:text-blue-600">
+                <a ... wire:current="font-bold text-zinc-800" href="/" wire:navigate class="text-xl font-bold text-gray-800 hover:text-blue-600">
                     BlogSpace
                 </a>
             </div>
 
             <!-- Navigation Links -->
-            <ul class="hidden md:flex space-x-6 list-none">
+            <div class="hidden md:flex space-x-6 list-none">
 
-                <x-nav-link href="home">Home</x-nav-link>
+                <a ... wire:current="font-bold text-zinc-800" href="/" wire:navigate>Home</a>
 
-                <x-nav-link href="posts">Posts</x-nav-link>
+                <a ... wire:current="font-bold text-zinc-800" href="/posts" wire:navigate>Posts</a>
 
+                <a ... wire:current="font-bold text-zinc-800" href="about" wire:navigate>About</a>
 
-                <x-nav-link href="about">About</x-nav-link>
-
-                <x-nav-link href="contact">Contact</x-nav-link>
-            </ul>
+                <a ... wire:current="font-bold text-zinc-800" href="contact" wire:navigate>Contact</a>
+            </div>
 
             <!-- Search -->
             <!-- <div class="hidden md:block">

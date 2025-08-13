@@ -7,6 +7,7 @@
     <title>{{ $title ?? 'Laravel App' }}</title>
     @stack('meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 
 <body>
@@ -16,14 +17,16 @@
 
     </header>
 
-    <main class="container mx-auto px-4 py-8">
-
+    <main>
         {{ $slot }}
     </main>
 
     <footer>
         <!-- Your footer here -->
     </footer>
+
+    @stack('scripts')
+    @livewireScripts
 </body>
 
 </html>
