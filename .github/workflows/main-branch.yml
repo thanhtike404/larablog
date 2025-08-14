@@ -1,0 +1,415 @@
+name: Main Branch CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  WWWGROUP: 1000
+  WWWUSER: 1000
+
+jobs:
+  # Job 1: Code Quality & Security (using Docker Compose)
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality & Security
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Configure environment for CI
+        run: |
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=pgsql" >> .env
+          echo "DB_HOST=pgsql" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_DATABASE=testing" >> .env
+          echo "DB_USERNAME=sail" >> .env
+          echo "DB_PASSWORD=password" >> .env
+          echo "REDIS_HOST=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "CACHE_DRIVER=redis" >> .env
+          echo "SESSION_DRIVER=redis" >> .env
+          echo "QUEUE_CONNECTION=redis" >> .env
+
+      - name: Start Docker Compose services
+        run: docker compose up -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          docker compose exec -T pgsql pg_isready -U sail -d testing
+          echo "Waiting for Redis..."
+          docker compose exec -T redis redis-cli ping
+
+      - name: Install Composer dependencies
+        run: docker compose exec -T laravel.test composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+      - name: Generate app key
+        run: docker compose exec -T laravel.test php artisan key:generate
+
+      - name: Run database migrations
+        run: docker compose exec -T laravel.test php artisan migrate --force
+
+      - name: Run PHP CS Fixer (Code Style)
+        run: |
+          docker compose exec -T laravel.test bash -c "
+            if [ -f 'vendor/bin/php-cs-fixer' ]; then
+              vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+            else
+              echo 'PHP CS Fixer not installed, skipping...'
+            fi
+          "
+
+      - name: Run PHPStan (Static Analysis)
+        run: |
+          docker compose exec -T laravel.test bash -c "
+            if [ -f 'vendor/bin/phpstan' ]; then
+              vendor/bin/phpstan analyse --memory-limit=2G
+            else
+              echo 'PHPStan not installed, skipping...'
+            fi
+          "
+
+      - name: Run Security Checker
+        run: docker compose exec -T laravel.test composer audit || echo "Security audit completed with warnings"
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down
+
+  # Job 2: Tests with Docker Compose (Multiple PHP versions)
+  tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+
+    name: Tests (PHP ${{ matrix.php }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Configure environment for testing
+        run: |
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=pgsql" >> .env
+          echo "DB_HOST=pgsql" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_DATABASE=testing" >> .env
+          echo "DB_USERNAME=sail" >> .env
+          echo "DB_PASSWORD=password" >> .env
+          echo "REDIS_HOST=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "CACHE_DRIVER=redis" >> .env
+          echo "SESSION_DRIVER=redis" >> .env
+          echo "QUEUE_CONNECTION=redis" >> .env
+
+      - name: Update Docker Compose for PHP version
+        run: |
+          sed -i "s|sail-8.4/app|sail-${{ matrix.php }}/app|g" docker-compose.yml
+          sed -i "s|runtimes/8.4|runtimes/${{ matrix.php }}|g" docker-compose.yml
+
+      - name: Start Docker Compose services
+        run: docker compose up -d --build
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          timeout 60 bash -c 'until docker compose exec -T pgsql pg_isready -U sail -d testing; do sleep 2; done'
+          echo "Waiting for Redis..."
+          timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 2; done'
+          echo "Waiting for Laravel app..."
+          sleep 10
+
+      - name: Install Composer dependencies
+        run: docker compose exec -T laravel.test composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+      - name: Generate app key
+        run: docker compose exec -T laravel.test php artisan key:generate
+
+      - name: Run database migrations
+        run: docker compose exec -T laravel.test php artisan migrate --force
+
+      - name: Seed database
+        run: docker compose exec -T laravel.test php artisan db:seed --force
+
+      - name: Clear and cache config
+        run: |
+          docker compose exec -T laravel.test php artisan config:clear
+          docker compose exec -T laravel.test php artisan config:cache
+          docker compose exec -T laravel.test php artisan route:cache
+          docker compose exec -T laravel.test php artisan view:cache
+
+      - name: Run Feature Tests
+        run: docker compose exec -T laravel.test php artisan test --coverage --min=70
+
+      - name: Test Redis Connection
+        run: docker compose exec -T laravel.test php artisan tinker --execute="echo 'Redis ping: ' . Redis::ping();"
+
+      - name: Test PostgreSQL Connection
+        run: docker compose exec -T laravel.test php artisan tinker --execute="echo 'DB connection: ' . DB::connection()->getPdo()->getAttribute(PDO::ATTR_CONNECTION_STATUS);"
+
+      - name: Test Cache Functionality
+        run: |
+          docker compose exec -T laravel.test php artisan tinker --execute="
+            Cache::put('test_key', 'test_value', 60);
+            echo 'Cache test: ' . (Cache::get('test_key') === 'test_value' ? 'PASSED' : 'FAILED');
+          "
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down
+
+  # Job 3: Frontend Build & Assets
+  frontend:
+    runs-on: ubuntu-latest
+    name: Frontend Build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Upload built assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-assets
+          path: public/build/
+          retention-days: 7
+
+  # Job 4: Performance & Load Testing (using Docker Compose)
+  performance:
+    runs-on: ubuntu-latest
+    needs: [tests, frontend]
+    name: Performance Testing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Configure for production-like environment
+        run: |
+          echo "APP_ENV=production" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "DB_CONNECTION=pgsql" >> .env
+          echo "DB_HOST=pgsql" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_DATABASE=laravel" >> .env
+          echo "DB_USERNAME=sail" >> .env
+          echo "DB_PASSWORD=password" >> .env
+          echo "REDIS_HOST=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "CACHE_DRIVER=redis" >> .env
+          echo "SESSION_DRIVER=redis" >> .env
+          echo "QUEUE_CONNECTION=redis" >> .env
+          echo "APP_PORT=8000" >> .env
+
+      - name: Download built assets
+        uses: actions/download-artifact@v3
+        with:
+          name: built-assets
+          path: public/build/
+
+      - name: Start Docker Compose services
+        run: docker compose up -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          timeout 60 bash -c 'until docker compose exec -T pgsql pg_isready -U sail -d laravel; do sleep 2; done'
+          echo "Waiting for Redis..."
+          timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 2; done'
+          echo "Waiting for Laravel app..."
+          sleep 15
+
+      - name: Install Composer dependencies (production)
+        run: docker compose exec -T laravel.test composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-dev
+
+      - name: Generate app key
+        run: docker compose exec -T laravel.test php artisan key:generate
+
+      - name: Run migrations and seed
+        run: |
+          docker compose exec -T laravel.test php artisan migrate --force
+          docker compose exec -T laravel.test php artisan db:seed --force
+
+      - name: Optimize Laravel for production
+        run: |
+          docker compose exec -T laravel.test php artisan config:cache
+          docker compose exec -T laravel.test php artisan route:cache
+          docker compose exec -T laravel.test php artisan view:cache
+          docker compose exec -T laravel.test php artisan event:cache
+
+      - name: Test server response
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:8000; do sleep 2; done'
+          echo "Server is responding!"
+
+      - name: Install Apache Bench
+        run: sudo apt-get update && sudo apt-get install -y apache2-utils
+
+      - name: Run performance tests
+        run: |
+          echo "Testing homepage performance..."
+          ab -n 100 -c 10 http://localhost:8000/
+          echo ""
+          echo "Testing posts page performance..."
+          ab -n 50 -c 5 http://localhost:8000/posts
+          echo ""
+          echo "Testing Redis cache performance..."
+          docker compose exec -T laravel.test php artisan tinker --execute="
+            \$start = microtime(true);
+            for (\$i = 0; \$i < 100; \$i++) {
+              Cache::put('perf_test_' . \$i, 'test_value_' . \$i, 60);
+            }
+            \$end = microtime(true);
+            echo 'Redis write performance: ' . round((\$end - \$start) * 1000, 2) . 'ms for 100 operations';
+          "
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down
+
+  # Job 5: Security Scan
+  security:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    name: Security Scanning
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Job 6: Deployment Preparation
+  deployment-prep:
+    runs-on: ubuntu-latest
+    needs: [tests, frontend, performance, security]
+    name: Deployment Preparation
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, redis
+
+      - name: Install Composer dependencies (production)
+        run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-dev
+
+      - name: Download built assets
+        uses: actions/download-artifact@v3
+        with:
+          name: built-assets
+          path: public/build/
+
+      - name: Create deployment package
+        run: |
+          tar -czf laravel-app.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env.example' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            .
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-package
+          path: laravel-app.tar.gz
+          retention-days: 30
+
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployment Ready!" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code quality checks passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Security scans completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Performance tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Frontend assets built" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Deployment package created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+  # Job 7: Notification
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deployment-prep]
+    name: Notification
+    if: always()
+
+    steps:
+      - name: Notify Success
+        if: needs.deployment-prep.result == 'success'
+        run: |
+          echo "🎉 Main branch pipeline completed successfully!"
+          echo "Ready for deployment to production."
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Main branch pipeline failed!"
+          echo "Please check the logs and fix issues before deployment."

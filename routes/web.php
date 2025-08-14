@@ -35,3 +35,39 @@ Route::prefix('posts')->group(function () {
 });
 
 Route::get('/authors', AuthorsPage::class)->name('authors');
+
+// Test Redis route
+Route::get('/test-redis', function () {
+    try {
+        // Test basic Redis operations
+        $testKey = 'test_key';
+        $testValue = 'test_value';
+
+        // Set a value
+        $setResult = \Illuminate\Support\Facades\Redis::set($testKey, $testValue);
+
+        // Get the value
+        $getValue = \Illuminate\Support\Facades\Redis::get($testKey);
+
+        // Get all keys to see what's actually stored
+        $allKeys = \Illuminate\Support\Facades\Redis::keys('*');
+
+        // Get Redis prefix from config
+        $prefix = config('database.redis.options.prefix', '');
+
+        return response()->json([
+            'set_result' => $setResult,
+            'get_result' => $getValue,
+            'expected_value' => $testValue,
+            'match' => $getValue === $testValue,
+            'redis_prefix' => $prefix,
+            'all_keys' => $allKeys,
+            'raw_connection_test' => 'Redis is working!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'redis_config' => config('database.redis')
+        ]);
+    }
+});
