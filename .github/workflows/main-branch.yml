@@ -168,11 +168,12 @@ jobs:
         run: docker compose exec -T laravel.test php artisan test --coverage --min=70
 
       - name: Test Redis Connection
-        run: docker compose exec -T laravel.test php artisan tinker --execute="echo 'Redis ping: ' . Redis::ping();"
+        run: |
+          docker compose exec -T laravel.test php artisan tinker --execute="echo \"Redis ping: \" . Redis::ping();"
 
       - name: Test PostgreSQL Connection
         run: |
-          docker compose exec -T laravel.test php artisan tinker --execute="echo 'DB connection: ' . DB::connection()->getPdo()->getAttribute(PDO::ATTR_CONNECTION_STATUS);"
+          docker compose exec -T laravel.test php artisan tinker --execute="echo \"DB connection: \" . DB::connection()->getPdo()->getAttribute(PDO::ATTR_CONNECTION_STATUS);"
 
       - name: Test Cache Functionality
         run: |
