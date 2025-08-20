@@ -11,3 +11,5 @@ import './bootstrap';
         document.documentElement.classList.remove('dark');
     }
 })();
+
+

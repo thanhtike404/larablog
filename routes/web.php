@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Posts\CreateBlogPost;
 use App\Livewire\Posts\PostList;
 use Illuminate\Support\Facades\Route;
 
@@ -16,3 +17,4 @@ Route::view('profile', 'profile')
 require __DIR__ . '/auth.php';
 
 Route::get('posts', PostList::class)->name('posts.show');
+Route::get('/dashboard/create-blog-post', CreateBlogPost::class)->name('posts.create');
