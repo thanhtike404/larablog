@@ -10,7 +10,14 @@ class DarkModeToggle extends Component
 
     public function mount()
     {
+        // Initialize from session, but JavaScript will handle the actual theme detection
         $this->darkMode = session('darkMode', false);
+    }
+
+    public function syncTheme($isDark)
+    {
+        $this->darkMode = $isDark;
+        session(['darkMode' => $this->darkMode]);
     }
 
     public function toggleDarkMode()

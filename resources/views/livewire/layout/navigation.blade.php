@@ -1,20 +1,14 @@
 <?php
 
 use App\Livewire\Actions\Logout;
-use Livewire\Volt\Component;
 
-new class extends Component
-{
-    /**
-     * Log the current user out of the application.
-     */
-    public function logout(Logout $logout): void
-    {
-        $logout();
+$logout = function (Logout $logout) {
+    $logout();
 
-        $this->redirect('/', navigate: true);
-    }
-}; ?>
+    $this->redirect('/', navigate: true);
+};
+
+?>
 
 <nav x-data="{ open: false }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
     <!-- Primary Navigation Menu -->
@@ -32,13 +26,15 @@ new class extends Component
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
-
                     </x-nav-link>
                 </div>
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 space-x-4">
+                <!-- Dark Mode Toggle -->
+                <livewire:dark-mode-toggle />
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
@@ -51,15 +47,10 @@ new class extends Component
                             </div>
                         </button>
                     </x-slot>
-
-                    <livewire:layout.navigation />
                     <x-slot name="content">
-
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             {{ __('Profile') }}
                         </x-dropdown-link>
-
-
 
                         <!-- Authentication -->
                         <button wire:click="logout" class="w-full text-start">
@@ -103,6 +94,14 @@ new class extends Component
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 
+                <!-- Dark Mode Toggle for Mobile -->
+                <div class="px-4 py-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Dark Mode</span>
+                        <livewire:dark-mode-toggle />
+                    </div>
+                </div>
+
                 <!-- Authentication -->
                 <button wire:click="logout" class="w-full text-start">
                     <x-responsive-nav-link>
@@ -112,6 +111,4 @@ new class extends Component
             </div>
         </div>
     </div>
-    <livewire.dark-mode-toggle />
-
 </nav>
