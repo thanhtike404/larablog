@@ -71,7 +71,8 @@ class CreateBlogPost extends Component
 
     public function getTagsForJsProperty()
     {
-        return $this->tags->map(function ($tag) {
+        $tagsCollection = is_array($this->tags) ? collect($this->tags) : $this->tags;
+        return $tagsCollection->map(function ($tag) {
             return [
                 'id' => $tag->id,
                 'name' => $tag->name
@@ -160,6 +161,7 @@ class CreateBlogPost extends Component
 
     public function save($publish = false)
     {
+
         $this->is_published = $publish;
 
         if ($publish && empty($this->published_at)) {
@@ -217,20 +219,31 @@ class CreateBlogPost extends Component
     {
         $this->save(false);
     }
-
+    public function logBlog()
+    {
+        dd('logging');
+    }
     public function publish()
     {
         $this->save(true);
     }
+    public function saveBlogPost($data)
+    {
 
+        dd($data);
+    }
     public function render()
     {
-        $tagsForJs = $this->tags->map(function ($tag) {
+
+        $tagsCollection = is_array($this->tags) ? collect($this->tags) : $this->tags;
+        $tagsForJs = $tagsCollection->map(function ($tag) {
             return [
                 'id' => $tag->id,
                 'name' => $tag->name
             ];
         });
+
+
 
         return view('livewire.posts.create-blog-post', [
             'tagsForJs' => $tagsForJs

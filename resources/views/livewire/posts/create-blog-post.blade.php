@@ -1,8 +1,12 @@
 <!-- Font Awesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<div x-data="blogEditor()" class="min-h-screen">
+<div x-data="blogEditor()" class="min-h-screen w-full">
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         .content-block:hover .remove-block {
             opacity: 1;
         }
@@ -97,10 +101,10 @@
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-            <!-- Main Editor Column -->
-            <div class="lg:col-span-2">
+            <!-- Main Editor Column (8 columns) -->
+            <div class="lg:col-span-8">
                 <!-- Post Title -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                     <div class="space-y-4">
@@ -330,8 +334,8 @@
                 </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="lg:col-span-1">
+            <!-- Sidebar (4 columns) -->
+            <div class="lg:col-span-4">
                 <div class="space-y-6">
 
                     <!-- Publishing Options -->
@@ -432,20 +436,18 @@
                                 </template>
                             </div>
                             <div class="relative">
-                                <input type="text" x-model="tagSearch" @focus="showTagDropdown = true" @input="filterTags()"
+                                <input type="text" x-model="tagSearch" @click="showTagDropdown = true" @input="filterTags()"
                                     placeholder="Search tags..."
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <div x-show="showTagDropdown" @click.outside="showTagDropdown = false"
-                                    class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-auto"
-                                    x-transition>
+                                <div x-show="showTagDropdown" @click.away="showTagDropdown = false"
+                                    class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-auto">
                                     <div class="py-1">
-                                        <template x-for="tag in filteredTags" :key="tag.id">
+
+                                        <template x-for="tag in {{$tags}}" :key="tag.id">
                                             <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
                                                 <input type="checkbox" :value="tag.id" :checked="isTagSelected(tag.id)"
                                                     @change="toggleTag(tag)" class="rounded border-gray-300 text-blue-600 mr-2">
-                                                @foreach ($tags as $tag)
                                                 <span class="text-sm" x-text="tag.name"></span>
-                                                @endforeach
                                             </label>
                                         </template>
                                     </div>
@@ -551,7 +553,10 @@
             secondaryImagePreview: null,
 
             init() {
+                // Initialize tags
                 this.filteredTags = [...this.availableTags];
+                this.showTagDropdown = false;
+                this.selectedTags = [];
 
                 // Auto-save every 30 seconds
                 setInterval(() => {
@@ -766,6 +771,8 @@
                     this.removeTag(tag.id);
                 } else {
                     this.selectedTags.push(tag);
+                    this.tagSearch = '';
+                    this.filterTags();
                 }
             },
 
@@ -778,11 +785,15 @@
             },
 
             filterTags() {
-                if (this.tagSearch.trim() === '') {
-                    this.filteredTags = [...this.availableTags];
+                const searchTerm = this.tagSearch.trim().toLowerCase();
+                if (searchTerm === '') {
+                    this.filteredTags = this.availableTags.filter(tag =>
+                        !this.selectedTags.some(selected => selected.id === tag.id)
+                    );
                 } else {
                     this.filteredTags = this.availableTags.filter(tag =>
-                        tag.name.toLowerCase().includes(this.tagSearch.toLowerCase())
+                        tag.name.toLowerCase().includes(searchTerm) &&
+                        !this.selectedTags.some(selected => selected.id === tag.id)
                     );
                 }
             },
@@ -982,10 +993,12 @@
             },
 
             publishPost() {
+
                 this.saveBlogPost(true);
             },
 
             saveBlogPost(publish) {
+
                 // Enhanced validation
                 if (!this.title.trim()) {
                     this.showNotification('Please enter a title for your blog post.', 'error');
@@ -1041,9 +1054,16 @@
                     word_count: this.getWordCount()
                 };
 
-                // Here you would typically call a Livewire method
-                // this.$wire.saveBlogPost(formData);
+                try {
+                    // this.$wire.logBlog();
 
+                    this.$wire.saveBlogPost(formData);
+
+                } catch (error) {
+                    this.showNotification('An error occurred while saving the blog post.', 'error');
+                    console.error('Save blog post error:', error);
+                    return;
+                }
                 console.log('Saving blog post:', formData);
 
                 // Clear auto-save draft if successfully saved

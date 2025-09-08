@@ -48,6 +48,10 @@ $logout = function (Logout $logout) {
                         </button>
                     </x-slot>
                     <x-slot name="content">
+
+                        <x-dropdown-link :href="route('dashboard.posts.create')" wire:navigate>
+                            {{ __('Create Post') }}
+                        </x-dropdown-link>
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             {{ __('Profile') }}
                         </x-dropdown-link>

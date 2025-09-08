@@ -2,16 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasSlug;
+use App\Models\Traits\Publishable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class BlogPost extends Model
 {
+    use HasFactory, HasSlug, Publishable;
+
     protected $fillable = [
         'title',
         'slug',
         'excerpt',
+        'content',
         'featured_image',
         'content_blocks',
         'seo_meta',
@@ -20,14 +26,16 @@ class BlogPost extends Model
         'user_id',
         'category_id',
         'reading_time',
-        'views_count'
+        'views_count',
+        'is_featured'
     ];
 
     protected $casts = [
         'content_blocks' => 'array',
         'seo_meta' => 'array',
         'is_published' => 'boolean',
-        'published_at' => 'datetime'
+        'published_at' => 'datetime',
+        'is_featured' => 'boolean'
     ];
 
     /**

@@ -9,10 +9,10 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\RichEditor;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\KeyValue;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class BlogPostForm
 {
@@ -30,7 +30,7 @@ class BlogPostForm
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(
                                         fn(string $context, $state, callable $set) =>
-                                        $context === 'create' ? $set('slug', \Str::slug($state)) : null
+                                        $context === 'create' ? $set('slug', Str::slug($state)) : null
                                     ),
 
                                 TextInput::make('slug')
@@ -49,21 +49,15 @@ class BlogPostForm
                             ->directory('blog-images')
                             ->columnSpanFull(),
 
-                        RichEditor::make('content_blocks')
+                        RichEditor::make('content')
                             ->label('Content')
-                            ->columnSpanFull()
                             ->toolbarButtons([
-                                'bold',
-                                'italic',
-                                'underline',
-                                'strike',
-                                'link',
-                                'heading',
-                                'bulletList',
-                                'orderedList',
-                                'blockquote',
-                                'codeBlock',
-                            ]),
+                                ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'link'],
+                                ['h2', 'h3', 'alignStart', 'alignCenter', 'alignEnd'],
+                                ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
+                                ['table', 'attachFiles'], // The `customBlocks` and `mergeTags` tools are also added here if those features are used.
+                                ['undo', 'redo'],
+                            ])
                     ]),
 
                 Section::make('Relationships')
@@ -74,34 +68,22 @@ class BlogPostForm
                                     ->label('Author')
                                     ->relationship('user', 'name')
                                     ->required()
-                                    ->default(auth()->id()),
+                                    ->default(function () {
+                                        return auth()->id() ?? 1;
+                                    }),
 
                                 Select::make('category_id')
                                     ->label('Primary Category')
                                     ->relationship('category', 'name')
-                                    ->createOptionForm([
-                                        TextInput::make('name')
-                                            ->required(),
-                                        TextInput::make('slug')
-                                            ->required(),
-                                    ]),
+                                    ->searchable()
+                                    ->preload(),
                             ]),
 
                         Select::make('tags')
                             ->relationship('tags', 'name')
                             ->multiple()
+                            ->searchable()
                             ->preload()
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->required(),
-                                TextInput::make('slug')
-                                    ->required(),
-                                TextInput::make('color')
-                                    ->default('#3B82F6'),
-                                Textarea::make('description'),
-                                TextInput::make('official_url')
-                                    ->url(),
-                            ])
                             ->columnSpanFull(),
                     ]),
 
@@ -116,14 +98,9 @@ class BlogPostForm
                                     ->default(now()),
                             ]),
 
-                        KeyValue::make('seo_meta')
-                            ->keyLabel('Meta Key')
-                            ->valueLabel('Meta Value')
-                            ->default([
-                                'meta_title' => '',
-                                'meta_description' => '',
-                                'meta_keywords' => '',
-                            ])
+                        Textarea::make('seo_meta')
+                            ->label('SEO Meta (JSON)')
+                            ->placeholder('{"meta_title": "", "meta_description": "", "meta_keywords": ""}')
                             ->columnSpanFull(),
 
                         Grid::make(2)

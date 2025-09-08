@@ -2,29 +2,57 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use App\Models\User;
-use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\Attributes\Url;
+use Livewire\Attributes\Computed;
 
 class UserTable extends Component
 {
-    public $perPage = 10;
-    public $search = '';
-    public function delete($id)
+    use WithPagination;
+
+    #[Url(as: 'q')]
+    public string $search = '';
+
+    public int $perPage = 10;
+
+    public function updatedSearch(): void
     {
-        $user = User::find($id);
-        $user->delete();
+        $this->resetPage();
     }
-    public function render()
+
+    public function delete(int $id): void
     {
-        if ($this->search) {
-            $users = User::where('name', 'like', '%' . $this->search . '%')
-                ->orWhere('email', 'like', '%' . $this->search . '%')
-                ->paginate($this->perPage);
-        } else {
-            $users = User::paginate($this->perPage);
+        $user = User::findOrFail($id);
+
+        // Add authorization check
+        if ($user->blogPosts()->exists()) {
+            session()->flash('error', 'Cannot delete user with existing blog posts.');
+            return;
         }
 
-        return view('livewire.user-table', compact('users'));
+        $user->delete();
+        session()->flash('success', 'User deleted successfully.');
+    }
+
+    #[Computed]
+    public function users()
+    {
+        return User::query()
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhere('email', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->withCount('blogPosts')
+            ->orderBy('created_at', 'desc')
+            ->paginate($this->perPage);
+    }
+
+    public function render()
+    {
+        return view('livewire.user-table');
     }
 }

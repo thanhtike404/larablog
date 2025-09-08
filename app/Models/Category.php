@@ -2,15 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Category extends Model
 {
+    use HasFactory, HasSlug;
+
     protected $fillable = [
         'name',
-        'slug'
+        'slug',
+        'description',
+        'color',
+        'icon'
     ];
 
     /**
@@ -19,6 +26,14 @@ class Category extends Model
     public function posts(): HasMany
     {
         return $this->hasMany(BlogPost::class);
+    }
+
+    /**
+     * Get published posts for the category
+     */
+    public function publishedPosts(): HasMany
+    {
+        return $this->posts()->published();
     }
 
     /**
